@@ -26,6 +26,36 @@
         .x .axis path {
             display: none;
         }
+
+        .d3-tip {
+            line-height: 1;
+            font-weight: bold;
+            font-size: 12px;
+            padding: 5px;
+            background: rgba(0, 0, 0, 0.7 );
+            color: #fff;
+            border-radius: 2px;
+        }
+
+            /* Creates a small triangle extender for the tooltip */
+        .d3-tip:after {
+            box-sizing: border-box;
+            display: inline;
+            font-size: 14px;
+            width: 100%;
+            line-height: 1;
+            color: rgba(0, 0, 0, 0.8);
+            content: "\25BC";
+            position: absolute;
+            text-align: center;
+        }
+
+            /* Style northward tooltips differently */
+        .d3-tip.n:after {
+            margin: -1px 0 0 0;
+            top: 100%;
+            left: 0;
+        }
     </style>
 </head>
 <body>
@@ -35,74 +65,70 @@
 </div>
 <svg class="chart"></svg>
 <script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
 <!--<script src="http://d3js.org/topojson.v1.min.js"></script>-->
 <script>
-    var url = "https://query.yahooapis.com/v1/public/yql?q=select%20symbol%2C%20LastTradePriceOnly%20from%20yahoo.finance.quotes%20where%20symbol%20in%20(%22YHOO%22%2C%22AAPL%22%2C%22GOOG%22%2C%22MSFT%22%2C%22FB%22%2C%22T%22%2C%22TSLA%22%2C%22PEP%22%2C%22JCP%22%2C%22CMG%22%2C%22WMT%22)&format=json&diagnostics=true&env=http%3A%2F%2Fdatatables.org%2Falltables.env&callback=";
+    var url = "https://query.yahooapis.com/v1/public/yql?q=select%20symbol%2C%20PercentChange%20from%20yahoo.finance.quotes%20where%20symbol%20in%20(%22YHOO%22%2C%22AAPL%22%2C%22GOOG%22%2C%22MSFT%22%2C%22FB%22%2C%22T%22%2C%22TSLA%22%2C%22PEP%22%2C%22JCP%22%2C%22CMG%22%2C%22WMT%22)&format=json&diagnostics=true&env=http%3A%2F%2Fdatatables.org%2Falltables.env&callback=";
     var jsonLive;
+    var margin = {top: 20, right: 30, bottom: 40, left: 40},
+            width = 500 - margin.left - margin.right,
+            height = 300 - margin.top - margin.bottom;
+    var x = d3.scale.ordinal().rangeRoundBands([0, width],.1);
+
+    var y = d3.scale.linear()
+            .range([height, 0]);
+    var xAxis = d3.svg.axis().scale(x).orient("bottom");
+    var yAxis = d3.svg.axis().scale(y).orient("left");
+    var tip = d3.tip()
+            .attr('class', 'd3-tip')
+            .offset([-10, 0])
+            .html(function(d) {
+                var fontColor = parseFloat(stripOffPercentageSign(d.PercentChange)) > 0 ? "green" : "red";
+                return "<strong>" + d.symbol + "</strong> : <span style='color:" + fontColor +"'>" + d.PercentChange + "</span>";
+            })
+
     d3.json(url, function(err, data){
-            if(!err){
-                jsonLive = data.query.results.quote;
-            }
-            var margin = {top: 20, right: 30, bottom: 40, left: 40},
-                width = 750 - margin.left - margin.right,
-                height = 500 - margin.top - margin.bottom;
-
-            var x = d3.scale.ordinal().rangeRoundBands([0, width],.1);
-
-            var y = d3.scale.linear()
-                        .range([height, 0]);
-
-            var xAxis = d3.svg.axis().scale(x).orient("bottom");
-            var yAxis = d3.svg.axis().scale(y).orient("left");
-            var chart = d3.select(".chart")
-                            .attr("width", width + margin.left + margin.right)
-                            .attr("height", height + margin.top + margin.bottom)
-                            .append("g")
-                            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");;
-
-            y.domain([0, d3.max(jsonLive, function(d) { return Math.ceil(d.LastTradePriceOnly); })]);
+                if(!err){
+                    jsonLive = data.query.results.quote;
+                }
+                var chart = d3.select(".chart")
+                        .attr("width", width + margin.left + margin.right)
+                        .attr("height", height + margin.top + margin.bottom)
+                        .append("g")
+                        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");;
+                chart.call(tip);
+                var absMin = Math.abs(d3.min(jsonLive, function(d) { return parseFloat(stripOffPercentageSign(d.PercentChange)); }));
+                var absMax = Math.abs(d3.max(jsonLive, function(d) { return parseFloat(stripOffPercentageSign(d.PercentChange)); }));
+                var absoluteMax =  absMax > absMin ? absMax : absMin;
+                y.domain([-absoluteMax, absoluteMax]);
                 x.domain(jsonLive.map(function(d) { return d.symbol; }));
-            chart.append("g")
-                    .attr("class", "y axis")
-                    .call(yAxis);
+                chart.append("g")
+                        .attr("class", "y axis")
+                        .call(yAxis);
 
                 chart.append("g")
                         .attr("class", "x axis")
-                        .attr("transform", "translate(0," + height + ")")
+                        .attr("transform", "translate(0," + y(0) + ")")
                         .attr("writing-mode", "tb")
                         .attr("y", "0")
                         .attr("glyph-orientation-vertical", "360")
                         .attr("direction", "ltr")
                         .call(xAxis);
-            chart.selectAll(".bar")
-                    .data(jsonLive)
-                    .enter().append("rect")
-                    .attr("class", "bar")
-                    .attr("x", function(d) { return x(d.symbol); })
-                    .attr("y", function(d) { return y(d.LastTradePriceOnly); })
-                    .attr("height", function(d) { return height - y(d.LastTradePriceOnly); })
-                    .attr("width", x.rangeBand());
-//            var bar = chart.selectAll("g")
-//                        .data(jsonLive)
-//                        .enter().append("g")
-//                        .attr("transform", function(d, i) { return "translate(" + i * barWidth + ", 0)"; })
-//
-//            bar.append("rect")
-//                    .attr("y", function(d) { return y(d.LastTradePriceOnly); })
-//                    .attr("height", function(d) { return height - y(d.LastTradePriceOnly); })
-//                    .attr("width", barWidth - 1);
-//
-//            bar.append("text")
-////                    .attr("class", "text")
-//                    .attr("y", function(d) { return y(d.LastTradePriceOnly); })
-//                    .attr("height", function(d) { return height - y(d.LastTradePriceOnly); })
-//                    .attr("dy", ".2em")
-//                    .attr("dx", ".6em")
-//                    .text(function(d) { return d.symbol; })
-//                    .attr("writing-mode", "tb-rl")
-//                    .attr("glyph-orientation-vertical", "90");
-        }
+                chart.selectAll(".bar")
+                        .data(jsonLive)
+                        .enter().append("rect")
+                        .attr("class", "bar")
+                        .attr("x", function(d) { return x(d.symbol); })
+                        .attr("y", function(d) { return y(parseFloat(stripOffPercentageSign(d.PercentChange)) > 0 ? parseFloat(stripOffPercentageSign(d.PercentChange)) : 0); })
+                        .attr("height", function(d) { return Math.abs(y(0) - Math.abs(y(parseFloat(stripOffPercentageSign(d.PercentChange))))); })
+                        .attr("width", x.rangeBand())
+                        .on("mouseover", tip.show)
+                        .on("mouseout", tip.hide);
+            }
     );
+    function stripOffPercentageSign(value){
+        return value.substr(0,value.length-1);
+    }
 </script>
 </body>
 
