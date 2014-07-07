@@ -56,3 +56,19 @@
     top: 100%;
     left: 0;
 }
+
+.symbolDiv{
+    position: absolute;
+    width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    font-weight: bold;
+    color: #a52a2a;
+    font-family: Arial;
+}
+
+.mainDiv{
+    position: relative;
+    margin-left: auto;
+    margin-right: auto;
+}

@@ -59,6 +59,8 @@ d3.json(createUrl(urlBegin, urlEnd, stockSymbol), function(err, data){
             .on("mouseover", tip.show)
             .on("mouseout", tip.hide)
             .on("click", function(d) { drawSingleChart(d.symbol)});
+
+        drawSingleChart(jsonLive[0].symbol);
     }
 );
 
@@ -95,7 +97,11 @@ function createUrl(begin, end, symbol){
 function drawSingleChart(symbol){
     var urlFirstPart = 'https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.historicaldata%20where%20symbol%20%3D%20%22';
     var urlLastPart = '%22%20and%20startDate%20%3D%20%222014-05-01%22%20and%20endDate%20%3D%20%222014-07-07%22&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&callback=';
+    d3.select(".symbolDiv").html("");
     d3.select(".individualDiv").html("");
+    var margin = {top: 20, right: 30, bottom: 10, left: 40},
+        width = 500 - margin.left - margin.right,
+        height = 300 - margin.top - margin.bottom;
     var x = d3.time.scale()
         .range([0, width]);
     var y = d3.scale.linear()
@@ -132,8 +138,8 @@ function drawSingleChart(symbol){
             .attr("class", "detailChart");
 
         var svg = d3.select(".detailChart")
-            .attr("width", width)
-            .attr("height", height)
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
             .append("g")
             .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
@@ -156,7 +162,12 @@ function drawSingleChart(symbol){
             .datum(data)
             .attr("class", "line")
             .attr("d", line);
+
+        d3.select(".symbolDiv")
+            .text(symbol)
+            .style("text-align", "center");
     });
+
 }
 
 /**
