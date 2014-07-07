@@ -57,7 +57,8 @@ d3.json(createUrl(urlBegin, urlEnd, stockSymbol), function(err, data){
             .attr("height", function(d) { return Math.abs(y(0) - Math.abs(y(parseFloat(stripOffPercentageSign(d.PercentChange))))); })
             .attr("width", x.rangeBand())
             .on("mouseover", tip.show)
-            .on("mouseout", tip.hide);
+            .on("mouseout", tip.hide)
+            .on("click", function(d) { drawSingleChart(d.symbol)});
     }
 );
 
@@ -89,4 +90,85 @@ function createUrl(begin, end, symbol){
         return url + end;
     }
     return begin + end;
+}
+
+function drawSingleChart(symbol){
+    var urlFirstPart = 'https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.historicaldata%20where%20symbol%20%3D%20%22';
+    var urlLastPart = '%22%20and%20startDate%20%3D%20%222014-05-01%22%20and%20endDate%20%3D%20%222014-07-07%22&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&callback=';
+    d3.select(".individualDiv").html("");
+    var x = d3.time.scale()
+        .range([0, width]);
+    var y = d3.scale.linear()
+        .range([height - margin.bottom, 0]);
+
+    var xAxis = d3.svg.axis()
+        .scale(x)
+        .orient('bottom');
+
+    var yAxis = d3.svg.axis()
+        .scale(y)
+        .orient('left');
+
+    var line = d3.svg.line()
+        .x(function(d) { return x(d.date); })
+        .y(function(d) { return y(d.close); });
+
+
+
+    d3.json(createUrlForGivenSymbol(urlFirstPart, urlLastPart, symbol), function(err, data1){
+        var data = data1.query.results.quote;
+        var parseDate = d3.time.format("%Y-%m-%d").parse;
+
+        data.forEach(function(d) {
+            d.date = parseDate(d.Date);
+            d.close = +d.Adj_Close;
+        });
+
+        x.domain(d3.extent(data, function(d) { return d.date; }));
+        y.domain([0, d3.max(data, function(d) { return d.close; }) + 10]);
+
+        d3.select(".individualDiv")
+            .append("svg")
+            .attr("class", "detailChart");
+
+        var svg = d3.select(".detailChart")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        svg.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + (height - margin.bottom) + ")")
+            .call(xAxis);
+
+        svg.append("g")
+            .attr("class", "y axis")
+            .call(yAxis)
+            .append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 6)
+            .attr("dy", ".71em")
+            .style("text-anchor", "end")
+            .text("Price ($)");
+
+        svg.append("path")
+            .datum(data)
+            .attr("class", "line")
+            .attr("d", line);
+    });
+}
+
+/**
+ * This function returns the Url for getting History for a given symbol
+ * @param begin
+ * @param end
+ * @param symbol
+ * @return {*}
+ */
+function createUrlForGivenSymbol(begin, end, symbol){
+    if(symbol.length > 0){
+        return begin + symbol + end;
+    }
+    return ;
 }

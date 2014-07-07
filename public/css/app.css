@@ -1,19 +1,4 @@
-/*div.tooltip {*/
-    /*position: absolute;*/
-    /*text-align: left;*/
-    /*height: 30px;*/
-    /*padding: 1px;*/
-    /*font: 10px sans-serif;*/
-    /*color: purple;*/
-    /*font-weight: bold;*/
-    /*background: lightsteelblue;*/
-    /*border: 0px;*/
-    /*white-space: nowrap;*/
-    /*border-radius: 8px;*/
-    /*pointer-events: none;*/
-/*}*/
-
-.bar {
+.bar, .bar2 {
     fill: steelblue;
 }
 
@@ -23,6 +8,12 @@
 
 .axis text {
     font: 10px sans-serif;
+}
+
+.line {
+    fill: none;
+    stroke: steelblue;
+    stroke-width: 1.5px;
 }
 
 .axis path,
